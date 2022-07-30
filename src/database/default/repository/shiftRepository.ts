@@ -7,7 +7,7 @@ import {
 } from "typeorm";
 import moduleLogger from "../../../shared/functions/logger";
 import Shift from "../entity/shift";
-import { QueryDeepPartialEntity } from "typeorm/query-builder/QueryPartialEntity";
+import { HttpError } from "../../../shared/classes/HttpError";
 
 const logger = moduleLogger("shiftRepository");
 
@@ -25,6 +25,7 @@ export const findById = async (
   logger.info("Find by id");
   const repository = getRepository(Shift);
   const data = await repository.findOne(id, opts);
+  if (!data) throw new HttpError(404, 'No data found')
   return data;
 };
 
@@ -46,19 +47,20 @@ export const create = async (payload: Shift): Promise<Shift> => {
 };
 
 export const updateById = async (
-  id: string,
-  payload: QueryDeepPartialEntity<Shift>
+  shift: Shift,
 ): Promise<Shift> => {
   logger.info("Update by id");
   const repository = getRepository(Shift);
-  await repository.update(id, payload);
-  return findById(id);
+  await repository.save(shift);
+  return findById(shift.id, { relations: ['week'] });
 };
 
 export const deleteById = async (
-  id: string | string[]
-): Promise<DeleteResult> => {
+  id: string
+): Promise<Shift> => {
   logger.info("Delete by id");
   const repository = getRepository(Shift);
-  return await repository.delete(id);
+  const shift = await findById(id, { relations: ['week'] });
+
+  return await repository.remove(shift);
 };

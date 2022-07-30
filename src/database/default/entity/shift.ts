@@ -1,5 +1,8 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
+
+import { BeforeInsert, BeforeRemove, BeforeUpdate, Column, Entity, ManyToOne, OneToOne, PrimaryGeneratedColumn } from "typeorm";
+import { HttpError } from "../../../shared/classes/HttpError";
 import { BaseTimestamp } from "./baseTimestamp";
+import Week from "./week";
 
 @Entity()
 export default class Shift extends BaseTimestamp {
@@ -23,4 +26,17 @@ export default class Shift extends BaseTimestamp {
     type: "time",
   })
   endTime: string;
+
+  @ManyToOne(() => Week, week => week.id) week: Week;
+
+  @BeforeUpdate()
+  @BeforeInsert()
+  beforeInsertOrUpdate() {
+    if (this.week?.isPublished) throw new HttpError(403, "Cannot update or add shift to published week")
+  }
+
+  @BeforeRemove()
+  beforeRemove() {
+    if (this.week?.isPublished) throw new HttpError(403, "Cannot delete shift inside published week")
+  }
 }

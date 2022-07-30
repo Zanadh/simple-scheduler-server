@@ -1,31 +1,30 @@
 import { Request, ResponseToolkit } from "@hapi/hapi";
-import * as shiftUsecase from "../../../usecases/shiftUsecase";
 import * as weekUsecase from "../../../usecases/weekUsecase";
 import { errorHandler } from "../../../shared/functions/error";
 import {
-  ICreateShift,
+  ICreateWeek,
   ISuccessResponse,
-  IUpdateShift,
+  IUpdateWeek,
 } from "../../../shared/interfaces";
 import moduleLogger from "../../../shared/functions/logger";
-import { FindManyOptions } from "typeorm";
-import Shift from "../../../database/default/entity/shift";
+import { Between, FindManyOptions } from "typeorm";
+import Week from "../../../database/default/entity/week";
+import { endOfWeek, parseISO } from "date-fns";
 import { queryWhereBuilder } from "../../../shared/utils";
-import { HttpError } from "../../../shared/classes/HttpError";
 
-const logger = moduleLogger("shiftController");
-
+const logger = moduleLogger("weekController");
 
 export const find = async (req: Request, h: ResponseToolkit) => {
   logger.info("Find shifts");
   try {
     let { firstDateOfWeek, ...filter } = req.query;
-    let queryOpt: FindManyOptions<Shift> = { ...filter }
-    
+    let queryOpt: FindManyOptions<Week> = { ...filter }
+    // let queryOpt: FindManyOptions<Shift> = { ...filter, join: { alias: 'w', leftJoinAndSelect: { 'w.id': 'weekId' } } }
+
     if (firstDateOfWeek) {
       queryOpt.where = { date: queryWhereBuilder.between(firstDateOfWeek) }
     }
-    const data = await shiftUsecase.find(queryOpt);
+    const data = await weekUsecase.find(queryOpt);
     const res: ISuccessResponse = {
       statusCode: 200,
       message: "Get shift successful",
@@ -38,15 +37,15 @@ export const find = async (req: Request, h: ResponseToolkit) => {
   }
 };
 
+
 export const findById = async (req: Request, h: ResponseToolkit) => {
-  logger.info("Find shift by id");
+  logger.info("Find week by id");
   try {
     const id = req.params.id;
-    const data = await shiftUsecase.findById(id, { relations: ['week'] });
-    if (!data) throw new HttpError(404, 'No data Found')
+    const data = await weekUsecase.findById(id);
     const res: ISuccessResponse = {
       statusCode: 200,
-      message: "Get shift successful",
+      message: "Get week successful",
       results: data,
     };
     return res;
@@ -57,15 +56,13 @@ export const findById = async (req: Request, h: ResponseToolkit) => {
 };
 
 export const create = async (req: Request, h: ResponseToolkit) => {
-  logger.info("Create shift");
+  logger.info("Create week");
   try {
-    const body = req.payload as ICreateShift;
-
-    const week = await weekUsecase.findOneOrCreate({ date: body.date })
-    const data = await shiftUsecase.create({ ...body, week });
+    const body = req.payload as ICreateWeek;
+    const data = await weekUsecase.create(body);
     const res: ISuccessResponse = {
       statusCode: 200,
-      message: "Create shift successful",
+      message: "Create week successful",
       results: data,
     };
     return res;
@@ -76,21 +73,15 @@ export const create = async (req: Request, h: ResponseToolkit) => {
 };
 
 export const updateById = async (req: Request, h: ResponseToolkit) => {
-  logger.info("Update shift by id");
+  logger.info("Update week by id");
   try {
     const id = req.params.id;
-    const body = req.payload as IUpdateShift;
+    const body = req.payload as IUpdateWeek;
 
-    const oldShiftData = await shiftUsecase.findById(id, { relations: ['week'] });
-    if (oldShiftData.week.isPublished) throw new HttpError(403, "Cannot update published shift")
-
-    const week = await weekUsecase.findOneOrCreate({ date: body.date })
-    if (week.isPublished) throw new HttpError(403, "Cannot add shift to published week")
-
-    const data = await shiftUsecase.updateById(id, { ...body, week });
+    const data = await weekUsecase.updateById(id, body);
     const res: ISuccessResponse = {
       statusCode: 200,
-      message: "Update shift successful",
+      message: "Update week successful",
       results: data,
     };
     return res;
@@ -100,14 +91,15 @@ export const updateById = async (req: Request, h: ResponseToolkit) => {
   }
 };
 
-export const deleteById = async (req: Request, h: ResponseToolkit) => {
-  logger.info("Delete shift by id");
+export const publish = async (req: Request, h: ResponseToolkit) => {
+  logger.info("Publish week by Id");
   try {
     const id = req.params.id;
-    const data = await shiftUsecase.deleteById(id);
+
+    const data = await weekUsecase.updateById(id, { isPublished: true });
     const res: ISuccessResponse = {
       statusCode: 200,
-      message: "Delete shift successful",
+      message: "Publish week by Id successful",
       results: data,
     };
     return res;
