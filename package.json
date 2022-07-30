@@ -13,7 +13,9 @@
     "test": "jest",
     "migrate": "ts-node ./node_modules/typeorm/cli.js migration:run",
     "migrate:create": "ts-node ./node_modules/typeorm/cli.js migration:create",
-    "migrate:generate": "ts-node ./node_modules/typeorm/cli.js migration:generate"
+    "migrate:generate": "ts-node ./node_modules/typeorm/cli.js migration:generate",
+    "tsc": "./node_modules/typescript/bin/tsc",
+    "postinstall": "npm run tsc"
   },
   "author": "",
   "license": "ISC",
