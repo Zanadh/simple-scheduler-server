@@ -11,7 +11,6 @@ import moduleLogger from "../../../shared/functions/logger";
 import { FindManyOptions } from "typeorm";
 import Shift from "../../../database/default/entity/shift";
 import { queryWhereBuilder } from "../../../shared/utils";
-import { HttpError } from "../../../shared/classes/HttpError";
 
 const logger = moduleLogger("shiftController");
 
@@ -43,7 +42,7 @@ export const findById = async (req: Request, h: ResponseToolkit) => {
   try {
     const id = req.params.id;
     const data = await shiftUsecase.findById(id, { relations: ['week'] });
-    if (!data) throw new HttpError(404, 'No data Found')
+
     const res: ISuccessResponse = {
       statusCode: 200,
       message: "Get shift successful",
@@ -80,14 +79,8 @@ export const updateById = async (req: Request, h: ResponseToolkit) => {
   try {
     const id = req.params.id;
     const body = req.payload as IUpdateShift;
-
-    const oldShiftData = await shiftUsecase.findById(id, { relations: ['week'] });
-    if (oldShiftData.week.isPublished) throw new HttpError(403, "Cannot update published shift")
-
-    const week = await weekUsecase.findOneOrCreate({ date: body.date })
-    if (week.isPublished) throw new HttpError(403, "Cannot add shift to published week")
-
-    const data = await shiftUsecase.updateById(id, { ...body, week });
+ 
+    const data = await shiftUsecase.updateById(id, body);
     const res: ISuccessResponse = {
       statusCode: 200,
       message: "Update shift successful",

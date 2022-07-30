@@ -1,10 +1,11 @@
 import * as shiftRepository from "../database/default/repository/shiftRepository";
-import * as weekRepository from "../database/default/repository/weekRepository";
 import { FindManyOptions, FindOneOptions } from "typeorm";
 import Shift from "../database/default/entity/shift";
 import { ICreateShift, IUpdateShift } from "../shared/interfaces";
 import { isOverlapping } from "../shared/utils";
 import { HttpError } from "../shared/classes/HttpError";
+import * as weekUsecase from "../usecases/weekUsecase";
+
 
 export const find = async (opts: FindManyOptions<Shift>): Promise<Shift[]> => {
   return shiftRepository.find(opts);
@@ -14,7 +15,10 @@ export const findById = async (
   id: string,
   opts?: FindOneOptions<Shift>
 ): Promise<Shift> => {
-  return shiftRepository.findById(id, opts);
+  const shift = shiftRepository.findById(id, opts);
+  if (!shift) throw new HttpError(404, 'No data Found');
+
+  return shift;
 };
 
 export const create = async (payload: ICreateShift): Promise<Shift> => {
@@ -52,16 +56,22 @@ export const updateById = async (
   payload: IUpdateShift
 ): Promise<Shift> => {
   const oldShift = await findById(id, { relations: ['week'] })
+  if (oldShift.week.isPublished) throw new HttpError(403, "Cannot update published shift")
+
+  const week = await weekUsecase.findOneOrCreate({ date: payload.date })
+  if (week.isPublished) throw new HttpError(403, "Cannot add shift to published week")
 
   await validateNewShift({ id, ...payload })
 
   Object.keys(payload).forEach((key) => {
     oldShift[key] = payload[key]
   })
+  oldShift.week = week;
+
   return shiftRepository.updateById(oldShift);
 };
 
 export const deleteById = async (id: string) => {
-  
+
   return shiftRepository.deleteById(id);
 };

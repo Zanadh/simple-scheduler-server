@@ -7,9 +7,8 @@ import {
   IUpdateWeek,
 } from "../../../shared/interfaces";
 import moduleLogger from "../../../shared/functions/logger";
-import { Between, FindManyOptions } from "typeorm";
+import { FindManyOptions } from "typeorm";
 import Week from "../../../database/default/entity/week";
-import { endOfWeek, parseISO } from "date-fns";
 import { queryWhereBuilder } from "../../../shared/utils";
 
 const logger = moduleLogger("weekController");
@@ -19,10 +18,9 @@ export const find = async (req: Request, h: ResponseToolkit) => {
   try {
     let { firstDateOfWeek, ...filter } = req.query;
     let queryOpt: FindManyOptions<Week> = { ...filter }
-    // let queryOpt: FindManyOptions<Shift> = { ...filter, join: { alias: 'w', leftJoinAndSelect: { 'w.id': 'weekId' } } }
 
     if (firstDateOfWeek) {
-      queryOpt.where = { date: queryWhereBuilder.between(firstDateOfWeek) }
+      queryOpt.where = { startDate: queryWhereBuilder.between(firstDateOfWeek) }
     }
     const data = await weekUsecase.find(queryOpt);
     const res: ISuccessResponse = {
@@ -36,7 +34,6 @@ export const find = async (req: Request, h: ResponseToolkit) => {
     return errorHandler(h, error);
   }
 };
-
 
 export const findById = async (req: Request, h: ResponseToolkit) => {
   logger.info("Find week by id");
